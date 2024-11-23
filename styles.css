@@ -1,0 +1,190 @@
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #f0f0f0;
+    font-family: Arial, sans-serif;
+    padding-bottom: 25vh;
+}
+
+.keyboard-toggle {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    margin: 0;
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 10;
+}
+
+.piano-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.piano {
+    display: flex;
+    position: relative;
+    background: #333;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.key {
+    width: 60px;
+    height: 200px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 0 0 6px 6px;
+    margin: 0 2px;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 10px;
+    user-select: none;
+    transition: background-color 0.1s;
+}
+
+.key.black {
+    background: #333;
+    width: 40px;
+    height: 120px;
+    margin-left: -22px;
+    margin-right: -22px;
+    z-index: 2;
+    color: white;
+}
+
+.loops-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 20px;
+    max-width: 600px;
+}
+
+.record-container {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 20px;
+    gap: 10px;
+    cursor: pointer;
+    border: none;
+    background: white;
+    transition: all 0.3s ease;
+    min-width: 120px;
+    justify-content: center;
+}
+
+.record-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #ff4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    display: none;
+}
+
+.record-dot.recording {
+    display: flex;
+    animation: blink 1s infinite;
+}
+
+.record-text {
+    font-size: 14px;
+}
+
+.record-subtext {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 4px;
+    text-align: center;
+    display: none;
+}
+
+.record-subtext.recording {
+    display: block;
+}
+
+.loop-item {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.loop-item:hover {
+    transform: scale(1.1);
+}
+
+.play-symbol {
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 8px 0 8px 12px;
+    border-color: transparent transparent transparent white;
+    margin-left: 2px;
+}
+
+.stop-symbol {
+    width: 10px;
+    height: 10px;
+    background: white;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+@media (max-width: 768px) {
+    .piano {
+        transform: scale(0.8);
+        margin: 10px;
+    }
+    
+    .key {
+        width: 45px;
+    }
+    
+    .key.black {
+        width: 30px;
+        margin-left: -17px;
+        margin-right: -17px;
+    }
+}
+
+@media (max-width: 480px) {
+    .piano {
+        transform: scale(0.6);
+        margin: 5px;
+    }
+}

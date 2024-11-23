@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keyboard Piano with Loops</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="keyboard-toggle">
+        <label>
+            <input type="checkbox" id="keyboardToggle" checked>
+            Enable Keyboard
+        </label>
+    </div>
+    <div class="piano-container">
+        <div class="piano" id="piano"></div>
+        <div class="controls">
+            <button id="recordBtn" class="record-container">
+                <div class="record-dot">3</div>
+                <span class="record-text">Record</span>
+            </button>
+            <div class="record-subtext">press to stop</div>
+        </div>
+    </div>
+    <div class="loops-container" id="loopsContainer"></div>
+
+    <script>
+        const keyMap = {
+            'a': 'C', 'e': 'C#', 's': 'D', 'r': 'D#', 'd': 'E',
+            'f': 'F', 'y': 'F#', 'h': 'G', 'u': 'G#', 'j': 'A',
+            'i': 'A#', 'k': 'B', 'l': 'C2'
+        };
+
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const piano = document.getElementById('piano');
+        const keyboardToggle = document.getElementById('keyboardToggle');
+        const recordBtn = document.getElementById('recordBtn');
+        const recordDot = recordBtn.querySelector('.record-dot');
+        const loopsContainer = document.getElementById('loopsContainer');
+        const activeNotes = new Map();
+        let isRecording = false;
+        let currentLoop = null;
+        let recordingStartTime = 0;
+        let loopCount = 0;
+        let countdownInterval;
+
+        const pastelColors = [
+            '#FFB3BA', '#BAFFC9', '#BAE1FF', '#FFFFBA',
+            '#FFB3F7', '#B3FFE5', '#B3B3FF', '#FFD9B3'
+        ];
+
+        // Create piano keys
+        Object.entries(keyMap).forEach(([keyboardKey, note]) => {
+            const keyElement = document.createElement('div');
+            keyElement.className = `key${note.includes('#') ? ' black' : ''}`;
+            keyElement.dataset.note = note;
+            keyElement.dataset.key = keyboardKey;
+            keyElement.textContent = keyboardKey.toUpperCase();
+            piano.appendChild(keyElement);
+        });
+
+        function createOscillator(frequency) {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            
+            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+            gainNode.gain.setTargetAtTime(0, audioContext.currentTime + 0.1, 0.2);
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            return oscillator;
+        }
+
+        function getNoteFrequency(note) {
+            const notes = {
+                'C': 261.63, 'C#': 277.18, 'D': 293.66, 'D#': 311.13, 'E': 329.63,
+                'F': 349.23, 'F#': 369.99, 'G': 392.00, 'G#': 415.30,
+                'A': 440.00, 'A#': 466.16, 'B': 493.88, 'C2': 523.25
+            };
+            return notes[note];
+        }
+
+        function highlightKey(keyElement, color = null) {
+            const isBlack = keyElement.classList.contains('black');
+            if (color) {
+                keyElement.style.backgroundColor = color;
+            } else {
+                keyElement.style.backgroundColor = isBlack ? '#666' : '#e0e0e0';
+            }
+        }
+
+        function unhighlightKey(keyElement) {
+            const isBlack = keyElement.classList.contains('black');
+            keyElement.style.backgroundColor = isBlack ? '#333' : 'white';
+        }
+
+        function playNote(note, color = null) {
+            if (activeNotes.has(note)) {
+                stopNote(note);
+            }
+            
+            const oscillator = createOscillator(getNoteFrequency(note));
+            oscillator.start();
+            activeNotes.set(note, oscillator);
+            
+            const keyElement = document.querySelector(`[data-note="${note}"]`);
+            if (keyElement) {
+                highlightKey(keyElement, color);
+            }
+
+            if (isRecording && currentLoop) {
+                const timestamp = audioContext.currentTime - recordingStartTime;
+                currentLoop.sequence.push({ note, timestamp });
+                
+                if (currentLoop.sequence.length >= 8) {
+                    stopRecording();
+                }
+            }
+        }
+
+        function stopNote(note) {
+            const oscillator = activeNotes.get(note);
+            if (oscillator) {
+                oscillator.stop();
+                activeNotes.delete(note);
+                
+                const keyElement = document.querySelector(`[data-note="${note}"]`);
+                if (keyElement) {
+                    unhighlightKey(keyElement);
+                }
+            }
+        }
+
+        function startRecording() {
+            isRecording = true;
+            recordingStartTime = audioContext.currentTime;
+            currentLoop = {
+                id: loopCount++,
+                sequence: [],
+                color: pastelColors[loopCount % pastelColors.length]
+            };
+
+            const recordText = recordBtn.querySelector('.record-text');
+            const recordSubtext = document.querySelector('.record-subtext');
+            
+            recordBtn.style.backgroundColor = currentLoop.color;
+            recordDot.classList.add('recording');
+            recordText.textContent = 'Recording';
+            recordSubtext.classList.add('recording');
+            
+            let countdown = 3;
+            recordDot.textContent = countdown;
+            
+            countdownInterval = setInterval(() => {
+                countdown--;
+                if (countdown > 0) {
+                    recordDot.textContent = countdown;
+                } else if (countdown === 0) {
+                    recordDot.textContent = '•';
+                }
+            }, 1000);
+            
+            setTimeout(() => {
+                if (isRecording) {
+                    stopRecording();
+                }
+            }, 3000);
+        }
+
+        function stopRecording() {
+            if (!isRecording) return;
+            
+            clearInterval(countdownInterval);
+            isRecording = false;
+            
+            const recordText = recordBtn.querySelector('.record-text');
+            const recordSubtext = document.querySelector('.record-subtext');
+            
+            recordBtn.style.backgroundColor = 'white';
+            recordDot.classList.remove('recording');
+            recordText.textContent = 'Record';
+            recordSubtext.classList.remove('recording');
+
+            if (currentLoop.sequence.length > 0) {
+                createLoopElement(currentLoop);
+            }
+        }
+
+        function createLoopElement(loop) {
+            const loopElement = document.createElement('div');
+            loopElement.className = 'loop-item';
+            loopElement.style.backgroundColor = loop.color;
+            
+            const playSymbol = document.createElement('div');
+            playSymbol.className = 'play-symbol';
+            loopElement.appendChild(playSymbol);
+            
+            let isPlaying = false;
+            let playbackInterval;
+
+            loopElement.onclick = () => {
+                if (isPlaying) {
+                    clearInterval(playbackInterval);
+                    isPlaying = false;
+                    playSymbol.className = 'play-symbol';
+                    loop.sequence.forEach(({note}) => {
+                        stopNote(note);
+                    });
+                } else {
+                    isPlaying = true;
+                    playSymbol.className = 'stop-symbol';
+                    
+                    const playSequence = () => {
+                        loop.sequence.forEach(({ note, timestamp }) => {
+                            setTimeout(() => {
+                                if (isPlaying) {
+                                    playNote(note, loop.color);
+                                    setTimeout(() => {
+                                        if (isPlaying) {
+                                            stopNote(note);
+                                        }
+                                    }, 200);
+                                }
+                            }, timestamp * 1000);
+                        });
+                    };
+
+                    playSequence();
+                    const totalDuration = loop.sequence[loop.sequence.length - 1].timestamp * 1000 + 200;
+                    playbackInterval = setInterval(playSequence, totalDuration);
+                }
+            };
+
+            loopsContainer.appendChild(loopElement);
+        }
+
+        // Event Listeners
+        recordBtn.addEventListener('click', () => {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        });
+
+        piano.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('key')) {
+                const note = e.target.dataset.note;
+                playNote(note);
+            }
+        });
+
+        piano.addEventListener('mouseup', (e) => {
+            if (e.target.classList.contains('key')) {
+                const note = e.target.dataset.note;
+                stopNote(note);
+            }
+        });
+
+        piano.addEventListener('mouseleave', () => {
+            activeNotes.forEach((_, note) => stopNote(note));
+        });
+
+        piano.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const key = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (key && key.classList.contains('key')) {
+                const note = key.dataset.note;
+                playNote(note);
+            }
+        });
+
+        piano.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            activeNotes.forEach((_, note) => stopNote(note));
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (!keyboardToggle.checked) return;
+            
+            const key = e.key.toLowerCase();
+            if (keyMap[key] && !e.repeat) {
+                playNote(keyMap[key]);
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (!keyboardToggle.checked) return;
+            
+            const key = e.key.toLowerCase();
+            if (keyMap[key]) {
+                stopNote(keyMap[key]);
+            }
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                activeNotes.forEach((_, note) => stopNote(note));
+                if (isRecording) {
+                    stopRecording();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
