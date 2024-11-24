@@ -33,6 +33,14 @@
         };
 
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        function initAudio() {
+            // Resume audio context after user interaction
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        }
+
         const piano = document.getElementById('piano');
         const keyboardToggle = document.getElementById('keyboardToggle');
         const recordBtn = document.getElementById('recordBtn');
@@ -99,7 +107,14 @@
             keyElement.style.backgroundColor = isBlack ? '#333' : 'white';
         }
 
+        document.addEventListener('touchstart', initAudio, { once: true });
+        document.addEventListener('click', initAudio, { once: true });
+
         function playNote(note, color = null) {
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+
             if (activeNotes.has(note)) {
                 stopNote(note);
             }
