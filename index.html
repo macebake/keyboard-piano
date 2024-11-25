@@ -28,6 +28,37 @@
     <script>
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
+        if (isMobile) {
+            // Find the keyboard toggle checkbox
+            const keyboardToggle = document.querySelector('input[type="checkbox"]');
+            if (keyboardToggle) {
+                // Uncheck by default on mobile
+                keyboardToggle.checked = false;
+
+                // Add event listener for the toggle
+                keyboardToggle.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        // Focus a hidden input to trigger keyboard
+                        const hiddenInput = document.createElement('input');
+                        hiddenInput.style.position = 'fixed';
+                        hiddenInput.style.top = '0';
+                        hiddenInput.style.left = '0';
+                        hiddenInput.style.opacity = '0';
+                        hiddenInput.style.pointerEvents = 'none';
+                        document.body.appendChild(hiddenInput);
+                        hiddenInput.focus();
+
+                        // Remove the hidden input when keyboard toggle is unchecked
+                        keyboardToggle.addEventListener('change', () => {
+                            if (!keyboardToggle.checked) {
+                                hiddenInput.remove();
+                            }
+                        });
+                    }
+                });
+            }
+        }
+
         let hasStarted = false;
 
         // Create an empty buffer to force audio activation
@@ -41,30 +72,30 @@
 
         async function forceiOSAudioStart() {
         if (hasStarted) return;
-        
+
         try {
             // Create and play empty buffer
             const source = createEmptyBuffer();
             source.start(0);
             source.stop(0.1);
-            
+
             // Force context state
             await audioContext.resume();
-            
+
             // Create a very short beep
             const osc = audioContext.createOscillator();
             const gain = audioContext.createGain();
-            
+
             gain.gain.setValueAtTime(0, audioContext.currentTime);
             gain.gain.linearRampToValueAtTime(0.01, audioContext.currentTime + 0.01);
             gain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.02);
-            
+
             osc.connect(gain);
             gain.connect(audioContext.destination);
-            
+
             osc.start(audioContext.currentTime);
             osc.stop(audioContext.currentTime, 0.1);
-            
+
             hasStarted = true;
             console.log('iOS audio initialized');
             return true;
@@ -85,7 +116,7 @@
     //     startButton.style.border = 'none';
     //     startButton.style.borderRadius = '8px';
     //     startButton.style.cursor = 'pointer';
-        
+
     //     startButton.addEventListener('click', async () => {
     //         startButton.textContent = 'Starting...';
     //         const success = await forceiOSAudioStart();
@@ -96,7 +127,7 @@
     //             startButton.style.backgroundColor = '#f44336';
     //         }
     //     });
-        
+
     //     document.querySelector('.piano-container').prepend(startButton);
     // }
 
@@ -153,16 +184,16 @@
         function createOscillator(frequency) {
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
-            
+
             oscillator.type = 'sine';
             oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
-            
+
             gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
             gainNode.gain.setTargetAtTime(0, audioContext.currentTime + 0.1, 0.2);
-            
+
             oscillator.connect(gainNode);
             gainNode.connect(audioContext.destination);
-            
+
             return oscillator;
         }
 
@@ -200,7 +231,7 @@
 
             if (isMobile && !hasStarted) {
                 // Try to initialize if it hasn't been yet
-                forceiOSAudioStart().then(() => { 
+                forceiOSAudioStart().then(() => {
                     // Play the note after initialization
                     playNote(note, color);
                 });
@@ -214,7 +245,7 @@
             const oscillator = createOscillator(getNoteFrequency(note));
             oscillator.start();
             activeNotes.set(note, oscillator);
-            
+
             const keyElement = document.querySelector(`[data-note="${note}"]`);
             if (keyElement) {
                 highlightKey(keyElement, color);
@@ -223,7 +254,7 @@
             if (isRecording && currentLoop) {
                 const timestamp = audioContext.currentTime - recordingStartTime;
                 currentLoop.sequence.push({ note, timestamp });
-                
+
                 if (currentLoop.sequence.length >= 8) {
                     stopRecording();
                 }
@@ -235,7 +266,7 @@
             if (oscillator) {
                 oscillator.stop();
                 activeNotes.delete(note);
-                
+
                 const keyElement = document.querySelector(`[data-note="${note}"]`);
                 if (keyElement) {
                     unhighlightKey(keyElement);
@@ -254,15 +285,15 @@
 
             const recordText = recordBtn.querySelector('.record-text');
             const recordSubtext = document.querySelector('.record-subtext');
-            
+
             recordBtn.style.backgroundColor = currentLoop.color;
             recordDot.classList.add('recording');
             recordText.textContent = 'Recording';
             recordSubtext.classList.add('recording');
-            
+
             let countdown = 3;
             recordDot.textContent = countdown;
-            
+
             countdownInterval = setInterval(() => {
                 countdown--;
                 if (countdown > 0) {
@@ -271,7 +302,7 @@
                     recordDot.textContent = '•';
                 }
             }, 1000);
-            
+
             setTimeout(() => {
                 if (isRecording) {
                     stopRecording();
@@ -281,13 +312,13 @@
 
         function stopRecording() {
             if (!isRecording) return;
-            
+
             clearInterval(countdownInterval);
             isRecording = false;
-            
+
             const recordText = recordBtn.querySelector('.record-text');
             const recordSubtext = document.querySelector('.record-subtext');
-            
+
             recordBtn.style.backgroundColor = 'white';
             recordDot.classList.remove('recording');
             recordText.textContent = 'Record';
@@ -302,11 +333,11 @@
             const loopElement = document.createElement('div');
             loopElement.className = 'loop-item';
             loopElement.style.backgroundColor = loop.color;
-            
+
             const playSymbol = document.createElement('div');
             playSymbol.className = 'play-symbol';
             loopElement.appendChild(playSymbol);
-            
+
             let isPlaying = false;
             let playbackInterval;
 
@@ -321,7 +352,7 @@
                 } else {
                     isPlaying = true;
                     playSymbol.className = 'stop-symbol';
-                    
+
                     const playSequence = () => {
                         loop.sequence.forEach(({ note, timestamp }) => {
                             setTimeout(() => {
@@ -390,7 +421,7 @@
 
         document.addEventListener('keydown', (e) => {
             if (!keyboardToggle.checked) return;
-            
+
             const key = e.key.toLowerCase();
             if (keyMap[key] && !e.repeat) {
                 playNote(keyMap[key]);
@@ -399,7 +430,7 @@
 
         document.addEventListener('keyup', (e) => {
             if (!keyboardToggle.checked) return;
-            
+
             const key = e.key.toLowerCase();
             if (keyMap[key]) {
                 stopNote(keyMap[key]);
