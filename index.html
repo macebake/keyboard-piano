@@ -26,6 +26,88 @@
     <div class="loops-container" id="loopsContainer"></div>
 
     <script>
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+        let hasStarted = false;
+
+        // Create an empty buffer to force audio activation
+        function createEmptyBuffer() {
+            const buffer = audioContext.createBuffer(1, 1, 22050);
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            return source;
+        }
+
+        async function forceiOSAudioStart() {
+        if (hasStarted) return;
+        
+        try {
+            // Create and play empty buffer
+            const source = createEmptyBuffer();
+            source.start(0);
+            source.stop(0.1);
+            
+            // Force context state
+            await audioContext.resume();
+            
+            // Create a very short beep
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            
+            gain.gain.setValueAtTime(0, audioContext.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, audioContext.currentTime + 0.01);
+            gain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.02);
+            
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            
+            osc.start(audioContext.currentTime);
+            osc.stop(audioContext.currentTime, 0.1);
+            
+            hasStarted = true;
+            console.log('iOS audio initialized');
+            return true;
+        } catch (e) {
+            console.error('iOS audio start failed:', e);
+            return false;
+        }
+    }
+
+    // if (isMobile) {
+    //     const startButton = document.createElement('button');
+    //     startButton.textContent = 'Tap for Sound (iOS)';
+    //     startButton.style.padding = '20px';
+    //     startButton.style.fontSize = '18px';
+    //     startButton.style.margin = '20px';
+    //     startButton.style.backgroundColor = '#4CAF50';
+    //     startButton.style.color = 'white';
+    //     startButton.style.border = 'none';
+    //     startButton.style.borderRadius = '8px';
+    //     startButton.style.cursor = 'pointer';
+        
+    //     startButton.addEventListener('click', async () => {
+    //         startButton.textContent = 'Starting...';
+    //         const success = await forceiOSAudioStart();
+    //         if (success) {
+    //             startButton.remove();
+    //         } else {
+    //             startButton.textContent = 'Try Again (Tap for Sound)';
+    //             startButton.style.backgroundColor = '#f44336';
+    //         }
+    //     });
+        
+    //     document.querySelector('.piano-container').prepend(startButton);
+    // }
+
+        // Instead, initialize on first interaction
+        if (isMobile) {
+            document.addEventListener('touchstart', () => {
+               if (!hasStarted) {
+                    forceiOSAudioStart();
+                 }
+            }, { once: true }); // once: true means it only runs once
+        }
         const keyMap = {
             'a': 'C', 'e': 'C#', 's': 'D', 'r': 'D#', 'd': 'E',
             'f': 'F', 'y': 'F#', 'h': 'G', 'u': 'G#', 'j': 'A',
@@ -110,15 +192,25 @@
         document.addEventListener('touchstart', initAudio, { once: true });
         document.addEventListener('click', initAudio, { once: true });
 
-        function playNote(note, color = null) {
+        async function playNote(note, color = null) {
+
             if (audioContext.state === 'suspended') {
                 audioContext.resume();
+            }
+
+            if (isMobile && !hasStarted) {
+                // Try to initialize if it hasn't been yet
+                forceiOSAudioStart().then(() => { 
+                    // Play the note after initialization
+                    playNote(note, color);
+                });
+                return;
             }
 
             if (activeNotes.has(note)) {
                 stopNote(note);
             }
-            
+
             const oscillator = createOscillator(getNoteFrequency(note));
             oscillator.start();
             activeNotes.set(note, oscillator);
